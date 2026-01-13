@@ -1,0 +1,8 @@
+{
+  "name": "foos-writeup-relay",
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "node-fetch": "^3.3.2"
+  }
+}

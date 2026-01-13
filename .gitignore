@@ -1,0 +1,4 @@
+node_modules/
+forward_state.json
+.env
+.DS_Store
