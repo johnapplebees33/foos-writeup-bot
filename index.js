@@ -66,7 +66,7 @@ function isFoosGameMessage(text) {
 }
 
 // Result block detector (ump result writeup)
-const RESULT_BLOCK = /(?ms)^\s*Pitch:\s*\d{1,4}\s*$.*?^\s*Swing:\s*\d{1,4}\s*$.*?^\s*Diff:\s*\d{1,4}\s*->\s*.+?\s*$/m;
+const RESULT_BLOCK = /^\s*Pitch:\s*\d{1,4}\s*$.*?^\s*Swing:\s*\d{1,4}\s*$.*?^\s*Diff:\s*\d{1,4}\s*->\s*.+?\s*$/ms;
 
 // Pitcher writeup detector (ump at-bat post)
 const PITCHER_ANNOUNCE = /\bOn the mound:\b/i;
