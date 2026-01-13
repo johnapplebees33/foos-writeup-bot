@@ -75,7 +75,7 @@ const UP_TO_BAT = /\bis up to bat\b|\bwhen you swing\b|\btimer expires\b/i;
 // Swing writeup detector (batter post)
 const SWING_EXPLICIT = /\bSwing\s*:\s*(\d{1,4})\b/i;
 const SWING_INLINE = /\b(?:swing|swung)\s+(\d{1,4})\b/i;
-const SWING_STANDALONE_LINE = /(?m)^\s*(\d{1,4})\s*$/;
+const SWING_STANDALONE_LINE = /^\s*(\d{1,4})\s*$/m;
 
 function likelySwingNumber(text) {
   let m = text.match(SWING_EXPLICIT) || text.match(SWING_INLINE) || text.match(SWING_STANDALONE_LINE);
