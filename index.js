@@ -37,6 +37,8 @@ function saveState(s) {
   fs.writeFileSync(STATE_PATH, JSON.stringify(s, null, 2));
 }
 const state = loadState();
+// Track threads confirmed to be Foos games
+state.foosThreads = state.foosThreads || {};
 
 async function postToFoos(content) {
   const res = await fetch(FOOS_WEBHOOK_URL, {
@@ -76,6 +78,33 @@ const UP_TO_BAT = /\bis up to bat\b|\bwhen you swing\b|\btimer expires\b/i;
 const SWING_EXPLICIT = /\bSwing\s*:\s*(\d{1,4})\b/i;
 const SWING_INLINE = /\b(?:swing|swung)\s+(\d{1,4})\b/i;
 const SWING_STANDALONE_LINE = /^\s*(\d{1,4})\s*$/m;
+const ROLE_PING = /<@&\d+>/; // ump/crew role ping
+
+function extractSwingFromText(text) {
+  if (!text) return null;
+
+  // Prefer explicit swing formats if present
+  let m =
+    text.match(/\bSwing\s*:\s*(\d{1,4})\b/i) ||
+    text.match(/\b(?:swing|swung)\s+(\d{1,4})\b/i);
+
+  if (m) {
+    const n = parseInt(m[1], 10);
+    return n >= 1 && n <= 1000 ? n : null;
+  }
+
+  // Otherwise: ANY integer 1–1000 anywhere (e.g., "793 feet")
+  // We ignore numbers inside Discord mentions like <@123...> by only matching plain word-boundary numbers.
+  const candidates = [...text.matchAll(/\b(\d{1,4})\b/g)]
+    .map(x => parseInt(x[1], 10))
+    .filter(n => n >= 1 && n <= 1000);
+
+  if (candidates.length === 0) return null;
+
+  // Heuristic: take the LAST candidate (players usually put the swing near the end)
+  return candidates[candidates.length - 1];
+}
+
 
 function likelySwingNumber(text) {
   let m = text.match(SWING_EXPLICIT) || text.match(SWING_INLINE) || text.match(SWING_STANDALONE_LINE);
@@ -88,10 +117,19 @@ function likelySwingNumber(text) {
 function classifyMessage(text) {
   if (RESULT_BLOCK.test(text)) return "UMP_RESULT";
   if (PITCHER_ANNOUNCE.test(text) && UP_TO_BAT.test(text)) return "PITCHER_WRITEUP";
-  const swing = likelySwingNumber(text);
-  if (swing !== null && text.trim().length >= 25) return "SWING_WRITEUP";
+
+  const swing = extractSwingFromText(text);
+
+  // If they ping the ump/crew role, treat it as a swing (even if the number is embedded like "793 feet")
+  if (ROLE_PING.test(text) && swing !== null && text.trim().length >= 25) return "SWING_WRITEUP";
+
+  // Also allow short numeric-only swings like "482"
+  if (swing !== null && text.trim().length <= 10) return "SWING_WRITEUP";
+
+  // Otherwise keep it conservative
   return null;
 }
+
 
 function trimBlock(text, max = 1600) {
   const t = (text || "").trim();
@@ -125,7 +163,15 @@ client.on(Events.MessageCreate, async (message) => {
     if (!content) return;
 
     // Only handle messages from Foos games
-    if (!isFoosGameMessage(content)) return;
+    // If any message contains Foos markers, mark the whole thread as a Foos game
+
+if (isFoosGameMessage(content)) {
+  state.foosThreads[ch.id] = true;
+  saveState(state);
+}
+
+// Only process messages in threads already confirmed as Foos games
+if (!state.foosThreads[ch.id]) return;
 
     const kind = classifyMessage(content);
     if (!kind) return;
